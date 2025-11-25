@@ -26,18 +26,20 @@ const rightButton = document.getElementById('right');
 
 function initBoard() {
     gameBoard.innerHTML = '';
+    tiles.clear();
+    
+    // Создаем фон игрового поля
     for (let i = 0; i < SIZE * SIZE; i++) {
         const cell = document.createElement('div');
-        cell.classList.add('tile');
+        cell.classList.add('cell');
         cell.style.width = `${cellSize}px`;
         cell.style.height = `${cellSize}px`;
         cell.style.left = `${(i % SIZE) * (cellSize + gap)}px`;
         cell.style.top = `${Math.floor(i / SIZE) * (cellSize + gap)}px`;
-        cell.style.backgroundColor = '#cdc1b4';
-        cell.style.transform = 'none';
-        cell.textContent = '';
         gameBoard.appendChild(cell);
     }
+    
+    // Инициализируем игровую доску
     for (let row = 0; row < SIZE; row++) {
         board[row] = [];
         for (let col = 0; col < SIZE; col++) {
@@ -54,17 +56,23 @@ function createTile(value, row, col) {
     tile.style.height = `${cellSize}px`;
     tile.style.left = `${col * (cellSize + gap)}px`;
     tile.style.top = `${row * (cellSize + gap)}px`;
+    tile.style.transform = 'scale(0)';
     gameBoard.appendChild(tile);
+    
+    // Анимация появления
+    setTimeout(() => {
+        tile.style.transform = 'scale(1)';
+        tile.style.transition = 'transform 0.15s ease';
+    }, 10);
+    
     tiles.set(`${row}-${col}`, tile);
     return tile;
 }
 
-function updateTilePosition(row, col) {
-    const tile = tiles.get(`${row}-${col}`);
-    if (tile) {
-        tile.style.left = `${col * (cellSize + gap)}px`;
-        tile.style.top = `${row * (cellSize + gap)}px`;
-    }
+function updateTilePosition(tile, newRow, newCol) {
+    tile.style.left = `${newCol * (cellSize + gap)}px`;
+    tile.style.top = `${newRow * (cellSize + gap)}px`;
+    tile.style.transition = 'left 0.15s ease, top 0.15s ease';
 }
 
 function removeTile(row, col) {
@@ -76,132 +84,183 @@ function removeTile(row, col) {
 }
 
 function moveTiles(direction) {
+    if (gameOver) return false;
+    
     savePreviousState();
     let moved = false;
     let moveScore = 0;
-    const merges = new Set();
+    const mergedTiles = new Set();
 
-    function merge(row, col, newRow, newCol) {
-        const key = `${newRow}-${newCol}`;
-        if (merges.has(key)) return 0;
-        board[newRow][newCol] *= 2;
-        board[row][col] = 0;
-        moveScore += board[newRow][newCol];
-        merges.add(key);
-        const tile = tiles.get(`${row}-${col}`);
-        tile.classList.add('merged');
-        tile.style.left = `${newCol * (cellSize + gap)}px`;
-        tile.style.top = `${newRow * (cellSize + gap)}px`;
-        setTimeout(() => {
-            removeTile(row, col);
-            removeTile(newRow, newCol);
-            createTile(board[newRow][newCol], newRow, newCol);
-            tile.classList.remove('merged');
-        }, 100);
-        return board[newRow][newCol];
+    // Функция для обработки одной строки/столбца
+    function processLine(line) {
+        const nonZero = line.filter(cell => cell.value !== 0);
+        const result = [];
+        let i = 0;
+        
+        while (i < nonZero.length) {
+            if (i < nonZero.length - 1 && nonZero[i].value === nonZero[i + 1].value) {
+                // Слияние плиток
+                const newValue = nonZero[i].value * 2;
+                result.push({
+                    value: newValue,
+                    from: [nonZero[i], nonZero[i + 1]],
+                    merged: true
+                });
+                moveScore += newValue;
+                i += 2;
+            } else {
+                // Простое перемещение
+                result.push({
+                    value: nonZero[i].value,
+                    from: [nonZero[i]],
+                    merged: false
+                });
+                i += 1;
+            }
+        }
+        
+        // Заполняем оставшиеся позиции нулями
+        while (result.length < SIZE) {
+            result.push({ value: 0, from: [], merged: false });
+        }
+        
+        return result;
     }
 
+    // Подготовка данных для движения
+    const movements = [];
+    
     if (direction === 'left') {
         for (let row = 0; row < SIZE; row++) {
-            let pos = 0;
+            const line = [];
             for (let col = 0; col < SIZE; col++) {
-                if (board[row][col] !== 0) {
-                    if (pos > 0 && board[row][pos - 1] === board[row][col]) {
-                        merge(row, col, row, pos - 1);
-                        moved = true;
-                    } else {
-                        if (col !== pos) {
-                            board[row][pos] = board[row][col];
-                            board[row][col] = 0;
-                            updateTilePosition(row, pos);
-                            tiles.set(`${row}-${pos}`, tiles.get(`${row}-${col}`));
-                            tiles.delete(`${row}-${col}`);
-                            moved = true;
-                        }
-                        pos++;
-                    }
-                }
+                line.push({ value: board[row][col], row, col });
             }
+            movements[row] = processLine(line);
         }
     } else if (direction === 'right') {
         for (let row = 0; row < SIZE; row++) {
-            let pos = SIZE - 1;
+            const line = [];
             for (let col = SIZE - 1; col >= 0; col--) {
-                if (board[row][col] !== 0) {
-                    if (pos < SIZE - 1 && board[row][pos + 1] === board[row][col]) {
-                        merge(row, col, row, pos + 1);
-                        moved = true;
-                    } else {
-                        if (col !== pos) {
-                            board[row][pos] = board[row][col];
-                            board[row][col] = 0;
-                            updateTilePosition(row, pos);
-                            tiles.set(`${row}-${pos}`, tiles.get(`${row}-${col}`));
-                            tiles.delete(`${row}-${col}`);
-                            moved = true;
-                        }
-                        pos--;
-                    }
-                }
+                line.push({ value: board[row][col], row, col });
             }
+            movements[row] = processLine(line).reverse();
         }
     } else if (direction === 'up') {
         for (let col = 0; col < SIZE; col++) {
-            let pos = 0;
+            const line = [];
             for (let row = 0; row < SIZE; row++) {
-                if (board[row][col] !== 0) {
-                    if (pos > 0 && board[pos - 1][col] === board[row][col]) {
-                        merge(row, col, pos - 1, col);
-                        moved = true;
-                    } else {
-                        if (row !== pos) {
-                            board[pos][col] = board[row][col];
-                            board[row][col] = 0;
-                            updateTilePosition(pos, col);
-                            tiles.set(`${pos}-${col}`, tiles.get(`${row}-${col}`));
-                            tiles.delete(`${row}-${col}`);
-                            moved = true;
-                        }
-                        pos++;
-                    }
-                }
+                line.push({ value: board[row][col], row, col });
             }
+            movements[col] = processLine(line);
         }
     } else if (direction === 'down') {
         for (let col = 0; col < SIZE; col++) {
-            let pos = SIZE - 1;
+            const line = [];
             for (let row = SIZE - 1; row >= 0; row--) {
-                if (board[row][col] !== 0) {
-                    if (pos < SIZE - 1 && board[pos + 1][col] === board[row][col]) {
-                        merge(row, col, pos + 1, col);
-                        moved = true;
-                    } else {
-                        if (row !== pos) {
-                            board[pos][col] = board[row][col];
-                            board[row][col] = 0;
-                            updateTilePosition(pos, col);
-                            tiles.set(`${pos}-${col}`, tiles.get(`${row}-${col}`));
-                            tiles.delete(`${row}-${col}`);
+                line.push({ value: board[row][col], row, col });
+            }
+            movements[col] = processLine(line).reverse();
+        }
+    }
+
+    // Обновляем доску и анимируем движение
+    const newBoard = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
+    
+    if (direction === 'left' || direction === 'right') {
+        for (let row = 0; row < SIZE; row++) {
+            for (let col = 0; col < SIZE; col++) {
+                newBoard[row][col] = movements[row][col].value;
+                
+                if (movements[row][col].from.length > 0 && !movements[row][col].merged) {
+                    // Простое перемещение
+                    const from = movements[row][col].from[0];
+                    if (from.row !== row || from.col !== col) {
+                        const tile = tiles.get(`${from.row}-${from.col}`);
+                        if (tile) {
+                            updateTilePosition(tile, row, col);
+                            tiles.set(`${row}-${col}`, tile);
+                            tiles.delete(`${from.row}-${from.col}`);
                             moved = true;
                         }
-                        pos--;
+                    }
+                }
+            }
+        }
+    } else {
+        // up или down
+        for (let col = 0; col < SIZE; col++) {
+            for (let row = 0; row < SIZE; row++) {
+                newBoard[row][col] = movements[col][row].value;
+                
+                if (movements[col][row].from.length > 0 && !movements[col][row].merged) {
+                    // Простое перемещение
+                    const from = movements[col][row].from[0];
+                    if (from.row !== row || from.col !== col) {
+                        const tile = tiles.get(`${from.row}-${from.col}`);
+                        if (tile) {
+                            updateTilePosition(tile, row, col);
+                            tiles.set(`${row}-${col}`, tile);
+                            tiles.delete(`${from.row}-${from.col}`);
+                            moved = true;
+                        }
                     }
                 }
             }
         }
     }
 
-    if (moved) {
-        score += moveScore;
-        scoreElement.textContent = score;
-        addRandomTiles(Math.floor(Math.random() * 2) + 1);
-        saveGameState();
-        checkGameOver();
-    }
+    // Обрабатываем слияния
+    setTimeout(() => {
+        tiles.forEach((tile, key) => {
+            const [row, col] = key.split('-').map(Number);
+            if (board[row][col] !== 0 && newBoard[row][col] === 0) {
+                // Плитка была слита - удаляем
+                removeTile(row, col);
+            }
+        });
+
+        // Создаем новые плитки для слитых
+        for (let row = 0; row < SIZE; row++) {
+            for (let col = 0; col < SIZE; col++) {
+                if (direction === 'left' || direction === 'right') {
+                    if (movements[row][col].merged && movements[row][col].value !== 0) {
+                        removeTile(movements[row][col].from[0].row, movements[row][col].from[0].col);
+                        removeTile(movements[row][col].from[1].row, movements[row][col].from[1].col);
+                        createTile(movements[row][col].value, row, col);
+                        moved = true;
+                    }
+                } else {
+                    if (movements[col][row].merged && movements[col][row].value !== 0) {
+                        removeTile(movements[col][row].from[0].row, movements[col][row].from[0].col);
+                        removeTile(movements[col][row].from[1].row, movements[col][row].from[1].col);
+                        createTile(movements[col][row].value, row, col);
+                        moved = true;
+                    }
+                }
+            }
+        }
+
+        // Обновляем основную доску
+        for (let row = 0; row < SIZE; row++) {
+            for (let col = 0; col < SIZE; col++) {
+                board[row][col] = newBoard[row][col];
+            }
+        }
+
+        if (moved) {
+            score += moveScore;
+            scoreElement.textContent = score;
+            addRandomTile();
+            saveGameState();
+            checkGameOver();
+        }
+    }, 150);
+
     return moved;
 }
 
-function addRandomTiles(count) {
+function addRandomTile() {
     const emptyCells = [];
     for (let row = 0; row < SIZE; row++) {
         for (let col = 0; col < SIZE; col++) {
@@ -210,9 +269,9 @@ function addRandomTiles(count) {
             }
         }
     }
-    for (let i = 0; i < count && emptyCells.length > 0; i++) {
-        const index = Math.floor(Math.random() * emptyCells.length);
-        const { row, col } = emptyCells.splice(index, 1)[0];
+    
+    if (emptyCells.length > 0) {
+        const { row, col } = emptyCells[Math.floor(Math.random() * emptyCells.length)];
         const value = Math.random() < 0.9 ? 2 : 4;
         board[row][col] = value;
         createTile(value, row, col);
@@ -220,38 +279,64 @@ function addRandomTiles(count) {
 }
 
 function checkGameOver() {
+    // Проверяем есть ли пустые клетки
     for (let row = 0; row < SIZE; row++) {
         for (let col = 0; col < SIZE; col++) {
-            if (board[row][col] === 0) return;
-            if (col < SIZE - 1 && board[row][col] === board[row][col + 1]) return;
-            if (row < SIZE - 1 && board[row][col] === board[row + 1][col]) return;
+            if (board[row][col] === 0) return false;
         }
     }
+    
+    // Проверяем возможные слияния
+    for (let row = 0; row < SIZE; row++) {
+        for (let col = 0; col < SIZE; col++) {
+            const current = board[row][col];
+            // Проверка справа
+            if (col < SIZE - 1 && board[row][col + 1] === current) return false;
+            // Проверка снизу
+            if (row < SIZE - 1 && board[row + 1][col] === current) return false;
+        }
+    }
+    
     gameOver = true;
     gameOverModal.style.display = 'flex';
     document.querySelector('.controls').style.display = 'none';
+    return true;
 }
 
 function savePreviousState() {
     previousState = {
-        board: board.map(row => row.slice()),
+        board: JSON.parse(JSON.stringify(board)),
         score: score
     };
 }
 
 function undo() {
     if (previousState && !gameOver) {
-        board.splice(0, board.length, ...previousState.board.map(row => row.slice()));
+        // Восстанавливаем состояние доски
+        for (let row = 0; row < SIZE; row++) {
+            for (let col = 0; col < SIZE; col++) {
+                board[row][col] = previousState.board[row][col];
+            }
+        }
         score = previousState.score;
         scoreElement.textContent = score;
+        
+        // Обновляем отображение
         refreshTiles();
         previousState = null;
     }
 }
 
 function refreshTiles() {
-    tiles.forEach((tile) => gameBoard.removeChild(tile));
+    // Удаляем все плитки
+    tiles.forEach((tile) => {
+        if (tile.parentNode === gameBoard) {
+            gameBoard.removeChild(tile);
+        }
+    });
     tiles.clear();
+    
+    // Создаем новые плитки согласно состоянию доски
     for (let row = 0; row < SIZE; row++) {
         for (let col = 0; col < SIZE; col++) {
             if (board[row][col] !== 0) {
@@ -264,31 +349,50 @@ function refreshTiles() {
 function startNewGame() {
     initBoard();
     score = 0;
-    scoreElement.textContent = 0;
+    scoreElement.textContent = '0';
     gameOver = false;
     previousState = null;
-    addRandomTiles(Math.floor(Math.random() * 3) + 1);
+    
+    // Добавляем 2 начальные плитки
+    addRandomTile();
+    addRandomTile();
+    
     saveGameState();
     gameOverModal.style.display = 'none';
+    
     if (window.innerWidth <= 600) {
         document.querySelector('.controls').style.display = 'flex';
     }
 }
 
 function saveGameState() {
-    localStorage.setItem('gameState', JSON.stringify({ board, score }));
+    const gameState = {
+        board: board,
+        score: score
+    };
+    localStorage.setItem('gameState', JSON.stringify(gameState));
 }
 
 function loadGameState() {
     const savedState = localStorage.getItem('gameState');
     if (savedState) {
         const { board: savedBoard, score: savedScore } = JSON.parse(savedState);
-        board.splice(0, board.length, ...savedBoard.map(row => row.slice()));
+        
+        // Восстанавливаем состояние доски
+        for (let row = 0; row < SIZE; row++) {
+            for (let col = 0; col < SIZE; col++) {
+                board[row][col] = savedBoard[row][col];
+            }
+        }
         score = savedScore;
         scoreElement.textContent = score;
+        
+        // Обновляем отображение
         refreshTiles();
     } else {
-        addRandomTiles(Math.floor(Math.random() * 3) + 1);
+        // Если нет сохраненной игры, начинаем новую
+        addRandomTile();
+        addRandomTile();
     }
 }
 
@@ -327,6 +431,7 @@ function showLeaderboard() {
     document.querySelector('.controls').style.display = 'none';
 }
 
+// Инициализация событий
 newGameButton.addEventListener('click', startNewGame);
 undoButton.addEventListener('click', undo);
 saveScoreButton.addEventListener('click', saveScore);
@@ -352,8 +457,11 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'ArrowRight') moveTiles('right');
 });
 
+// Инициализация игры
 initBoard();
 loadGameState();
+
+// Адаптивность для мобильных устройств
 if (window.innerWidth <= 600) {
     document.querySelector('.controls').classList.add('mobile-only');
     if (!gameOver) {
