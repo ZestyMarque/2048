@@ -1,52 +1,78 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>2048</title>
-    <link rel="stylesheet" href="styles.css">
+
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="container">
+
+    <header class="top-panel">
         <h1>2048</h1>
-        <div class="score-container">
-            <div class="score">Очки: <span id="score">0</span></div>
-            <button id="new-game">Начать заново</button>
-            <button id="undo">Отмена хода</button>
+        <div class="score-box">
+            <span>Счёт:</span>
+            <span id="score">0</span>
         </div>
-        <div id="game-board" class="game-board"></div>
-        <div class="controls mobile-only">
-            <button id="up">↑</button>
-            <button id="left">←</button>
-            <button id="down">↓</button>
-            <button id="right">→</button>
-        </div>
-        <div id="game-over" class="modal">
-            <div class="modal-content">
-                <p>Игра окончена!</p>
-                <input type="text" id="player-name" placeholder="Введите имя">
-                <button id="save-score">Сохранить результат</button>
-                <button id="restart">Начать заново</button>
+    </header>
+
+    <main>
+        <!-- Контейнер игрового поля -->
+        <div class="grid"></div>
+
+        <!-- Кнопки управления (только мобильные) -->
+        <div class="controls-mobile" id="mobileControls">
+            <button data-move="up">▲</button>
+            <div class="middle-row">
+                <button data-move="left">◀</button>
+                <button data-move="right">▶</button>
             </div>
+            <button data-move="down">▼</button>
         </div>
-        <div id="leaderboard-modal" class="modal">
-            <div class="modal-content">
-                <h2>Таблица лидеров</h2>
-                <table id="leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th>Имя</th>
-                            <th>Очки</th>
-                            <th>Дата</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                <button id="close-leaderboard">Закрыть</button>
-            </div>
-        </div>
-        <button id="show-leaderboard">Показать лидерборд</button>
+    </main>
+
+    <!-- Панель действий -->
+    <div class="action-buttons">
+        <button id="restartBtn">Начать заново</button>
+        <button id="undoBtn">Отмена хода</button>
+        <button id="openLeaderboardBtn">Лидеры</button>
     </div>
+
+    <!-- Модалка конца игры -->
+    <div class="modal" id="gameOverModal">
+        <div class="modal-content">
+            <p id="gameOverMessage">Игра окончена</p>
+
+            <div id="nameInputBlock">
+                <input id="playerName" type="text" placeholder="Введите имя" />
+                <button id="saveResultBtn">Сохранить результат</button>
+            </div>
+
+            <button id="restartAfterGameBtn">Начать заново</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно лидеров -->
+    <div class="modal" id="leaderboardModal">
+        <div class="modal-content leader-content">
+            <h2>Таблица лидеров</h2>
+
+            <table class="leader-table">
+                <thead>
+                <tr>
+                    <th>Имя</th>
+                    <th>Очки</th>
+                    <th>Дата</th>
+                </tr>
+                </thead>
+                <tbody id="leaderboardTable"></tbody>
+            </table>
+
+            <button id="closeLeaderboardBtn">Закрыть</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
