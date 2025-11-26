@@ -58,8 +58,8 @@ function renderTile(r, c, value) {
     tile.className = 'tile';
     tile.setAttribute('data-value', value);
     tile.textContent = value;
-    tile.style.left = ${c * (100 + 10) + 10}px;
-    tile.style.top = ${r * (100 + 10) + 10}px;
+    tile.style.left = `${c * (100 + 10) + 10}px`;
+    tile.style.top = `${r * (100 + 10) + 10}px`;
     grid.appendChild(tile);
 }
 
@@ -115,7 +115,7 @@ function move(direction) {
     let moved = false;
     let points = 0;
 
-function slideRow(row) {
+    function slideRow(row) {
         const filtered = row.filter(v => v !== null);
         for (let i = 0; i < filtered.length - 1; i++) {
             if (filtered[i] === filtered[i + 1]) {
@@ -184,7 +184,7 @@ function isGameOver() {
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             const val = gridState[r][c];
-            if ((c < GRID_SIZE - 1 && gridState[r][c + 1] === val) 
+            if ((c < GRID_SIZE - 1 && gridState[r][c + 1] === val) ||
                 (r < GRID_SIZE - 1 && gridState[r + 1][c] === val)) {
                 return false;
             }
@@ -205,12 +205,12 @@ function undoMove() {
 
 // Лидерборд
 function loadLeaderboard() {
-    const leaderboard = JSON.parse(localStorage.getItem('leaderboard')  '[]');
+    const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
     leaderboard.sort((a, b) => b.score - a.score);
     leaderboardTable.innerHTML = '';
     leaderboard.slice(0, 10).forEach(entry => {
         const row = document.createElement('tr');
-        row.innerHTML = <td>${entry.name}</td><td>${entry.score}</td><td>${entry.date}</td>;
+        row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td><td>${entry.date}</td>`;
         leaderboardTable.appendChild(row);
     });
 }
@@ -218,7 +218,7 @@ function loadLeaderboard() {
 function saveScore() {
     const name = nameInput.value.trim();
     if (!name) return;
-    const leaderboard = JSON.parse(localStorage.getItem('leaderboard')  '[]');
+    const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
     leaderboard.push({ name, score, date: new Date().toLocaleDateString() });
     localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
     nameInput.style.display = 'none';
@@ -242,7 +242,7 @@ grid.addEventListener('touchstart', (e) => {
     startY = e.touches[0].clientY;
 });
 grid.addEventListener('touchend', (e) => {
-    if (!startX  !startY) return;
+    if (!startX || !startY) return;
     const endX = e.changedTouches[0].clientX;
     const endY = e.changedTouches[0].clientY;
     const diffX = endX - startX;
