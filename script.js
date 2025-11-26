@@ -208,7 +208,7 @@ function undoMove() {
 
 // Лидерборд
 function loadLeaderboard() {
-    const leaderboard = JSON.parse(localStorage.getItem('leaderboard')  '[]');
+    const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
     leaderboard.sort((a, b) => b.score - a.score);
     
     // Очистка таблицы без innerHTML
@@ -234,6 +234,7 @@ function loadLeaderboard() {
         leaderboardTable.appendChild(row);
     });
 }
+
 
 function saveScore() {
     const name = nameInput.value.trim();
