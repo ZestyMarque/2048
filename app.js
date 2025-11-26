@@ -1,132 +1,208 @@
 class Game2048 {
     constructor() {
         this.size = 4;
-        this.grid = Array(this.size).fill().map(() => Array(this.size).fill(0));
+        this.grid = this.createEmptyGrid();
         this.score = 0;
         this.gameOver = false;
-        this.history = [];
+        this.canUndo = false;
+        this.previousState = null; // для undo
 
+        // DOM-элементы
         this.container = document.getElementById('game-container');
-        this.scoreEl = document.getElementById('score');
-        this.undoBtn = document.getElementById('undo-btn');
+        this.scoreElement = document.getElementById('score');
+        this.undoButton = document.getElementById('undo-btn');
+        this.newGameButton = document.getElementById('new-game-btn');
 
-        this.initBoard();
-        this.newGame(); // начнёт игру
+        this.setupBoard();
+        this.startNewGame();
         this.bindEvents();
-        this.loadSavedGame();
-        this.updateLeaderboard();
-        this.setupMobileControls();
+        this.loadFromLocalStorage();
     }
 
-    initBoard() {
+    createEmptyGrid() {
+        return Array(this.size).fill(null).map(() => Array(this.size).fill(0));
+    }
+
+    setupBoard() {
+        // Создаём 16 ячеек фона
         this.container.innerHTML = '';
-        for (let i = 0; i < this.size * this.size; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            this.container.appendChild(cell);
-        }
-    }
-
-    // Поворот матрицы по часовой на 90°
-    rotateMatrix(matrix) {
-        const n = matrix.length;
-        const rotated = Array(n).fill().map(() => Array(n).fill(0));
-        for (let i = 0; i < n; i++) {
-            for (let j = 0; j < n; j++) {
-                rotated[j][n - 1 - i] = matrix[i][j];
-            }
-        }
-        return rotated;
-    }
-
-    // Движение влево + подсчёт очков + возврат новых плиток для анимации
-    slideLeft(row) {
-        let arr = row.filter(v => v !== 0);
-        let points = 0;
-        const merged = [];
-
-        for (let i = 0; i < arr.length - 1; i++) {
-            if (arr[i] === arr[i + 1]) {
-                arr[i] *= 2;
-                points += arr[i];
-                merged.push(true);
-                arr.splice(i + 1, 1);
-                i--;
-            } else {
-                merged.push(false);
-            }
-        }
-        while (merged.length < 4) merged.push(false);
-
-        while (arr.length < 4) arr.push(0);
-        return { arr, points, merged };
-    }
-
-    move(direction) {
-        if (this.gameOver) return;
-
-        let rotated = 0;
-        let grid = this.grid.map(row => row.slice());
-
-        // Поворачиваем сетку так, чтобы движение было влево
-        if (direction === 'right') { grid = this.rotateMatrix(grid); grid = this.rotateMatrix(grid); rotated = 2; }
-        else if (direction === 'down') { grid = this.rotateMatrix(grid); rotated = 1; }
-        else if (direction === 'up') { grid = this.rotateMatrix(grid); grid = this.rotateMatrix(grid); grid = this.rotateMatrix(grid); rotated = 3; }
-
-        let moved = false;
-        let totalPoints = 0;
-        const mergePositions = [];
-
         for (let i = 0; i < this.size; i++) {
-            const result = this.slideLeft(grid[i]);
-            if (grid[i].join() !== result.arr.join()) moved = true;
-            grid[i] = result.arr;
-            totalPoints += result.points;
-            if (result.points > 0) {
-                // Запоминаем, где было слияние
-                for (let j = 0; j < this.size; j++) {
-                    if (result.merged[j]) mergePositions.push({row: i, col: j});
+            for (let j = 0; j < this.size; j++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                this.container.appendChild(cell);
+            }
+        }
+    }
+
+    // Сохраняем состояние перед ходом
+    savePreviousState() {
+        this.previousState = {
+            grid: this.grid.map(row => row.slice()),
+            score: this.score
+        };
+        this.canUndo = true;
+    }
+
+    // Отмена хода
+    undo() {
+        if (!this.canUndo || this.gameOver || !this.previousState) return;
+
+        this.grid = this.previousState.grid.map(row => row.slice());
+        this.score = this.previousState.score;
+        this.gameOver = false;
+        this.canUndo = false;
+
+        this.render();
+        this.saveToLocalStorage();
+    }
+
+    // Добавление случайной плитки (2 или 4)
+    addRandomTile() {
+        const emptyCells = [];
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
+                if (this.grid[i][j] === 0) {
+                    emptyCells.push({ row: i, col: j });
                 }
             }
         }
 
-        // Возвращаем поворот
-        for (let i = 0; i < rotated; i++) {
-            grid = this.rotateMatrix(grid);
-        }
+        if (emptyCells.length === 0) return false;
 
-        if (!moved) return;
-
-        this.saveState();
-        this.grid = grid;
-        this.score += totalPoints;
-
-        // Анимация: сначала двигаем, потом добавляем новые
-        this.render(true, mergePositions);
-
-        // Новая плитка
-        setTimeout(() => {
-            this.addRandomTile();
-            this.render();
-            if (this.isGameOver()) this.showGameOver();
-        }, 160);
+        const { row, col } = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        this.grid[row][col] = Math.random() < 0.9 ? 2 : 4;
+        return true;
     }
 
-    addRandomTile() {
-        const empty = [];
+    // Основная функция движения
+    move(direction) {
+        if (this.gameOver) return;
+
+        this.savePreviousState();
+
+        let hasMoved = false;
+        let addedScore = 0;
+
+        // Поворачиваем сетку, чтобы всегда двигать влево
+        let tempGrid = this.copyGrid(this.grid);
+
+        if (direction === 'up')    tempGrid = this.rotateClockwise(tempGrid, 3);
+        if (direction === 'down')  tempGrid = this.rotateClockwise(tempGrid, 1);
+        if (direction === 'right') tempGrid = this.rotateClockwise(tempGrid, 2);
+
+        // Двигаем влево
         for (let i = 0; i < this.size; i++) {
-            for (let j = 0; j < this.size; j++) {
-                if (this.grid[i][j] === 0) empty.push({i, j});
+            const { newRow, score: rowScore, moved: rowMoved } = this.slideAndMerge(tempGrid[i]);
+            tempGrid[i] = newRow;
+            addedScore += rowScore;
+            if (rowMoved) hasMoved = true;
+        }
+
+        // Поворачиваем обратно
+        if (direction === 'up')    tempGrid = this.rotateClockwise(tempGrid, 1);
+        if (direction === 'down')  tempGrid = this.rotateClockwise(tempGrid, 3);
+        if (direction === 'right') tempGrid = this.rotateClockwise(tempGrid, 2);
+
+        if (!hasMoved) {
+            this.canUndo = false; // ход не состоялся — откатывать нечего
+            return;
+        }
+
+        this.grid = tempGrid;
+        this.score += addedScore;
+
+        // Добавляем новую плитку
+        this.addRandomTile();
+
+        this.render();
+
+        // Проверяем конец игры
+        if (this.isGameOver()) {
+            this.gameOver = true;
+            setTimeout(() => this.showGameOver(), 300);
+        }
+
+        this.saveToLocalStorage();
+    }
+
+    // Сдвиг и слияние одной строки влево
+    slideAndMerge(row) {
+        // Убираем нули
+        let filtered = row.filter(val => val !== 0);
+        let score = 0;
+        let moved = false;
+
+        // Слияние
+        for (let i = 0; i < filtered.length - 1; i++) {
+            if (filtered[i] === filtered[i + 1]) {
+                filtered[i] *= 2;
+                score += filtered[i];
+                filtered.splice(i + 1, 1);
+                moved = true;
+                i--; // проверяем следующую пару
             }
         }
-        if (empty.length === 0) return;
-        const pos = empty[Math.floor(Math.random() * empty.length)];
-        this.grid[pos.i][pos.j] = Math.random() < 0.9 ? 2 : 4;
+
+        // Дополняем нулями
+        while (filtered.length < this.size) {
+            filtered.push(0);
+        }
+
+        // Проверяем, изменилась ли строка
+        const originalWithoutZeroes = row.filter(v => v !== 0);
+        if (originalWithoutZeroes.join() !== filtered.slice(0, originalWithoutZeroes.length).join()) {
+            moved = true;
+        }
+
+        return { newRow: filtered, score, moved };
     }
 
-    render(withMovement = false, mergePositions = []) {
-        // Удаляем старые плитки
-        document.querySelectorAll('.tile').forEach(t => t.remove());
+    // Поворот матрицы по часовой (количество раз)
+    rotateClockwise(grid, times = 1) {
+        let result = this.copyGrid(grid);
+        for (let t = 0; t < times; t++) {
+            const n = result.length;
+            const rotated = this.createEmptyGrid();
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    rotated[j][n - 1 - i] = result[i][j];
+                }
+            }
+            result = rotated;
+        }
+        return result;
+    }
+
+    copyGrid(grid) {
+        return grid.map(row => row.slice());
+    }
+
+    // Проверка на конец игры
+    isGameOver() {
+        // Есть пустые клетки?
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
+                if (this.grid[i][j] === 0) return false;
+            }
+        }
+
+        // Есть ли возможные слияния?
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
+                const val = this.grid[i][j];
+                if (i < 3 && this.grid[i + 1][j] === val) return false;
+                if (j < 3 && this.grid[i][j + 1] === val) return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Отрисовка поля
+    render() {
+        // Удаляем все плитки
+        document.querySelectorAll('.tile').forEach(tile => tile.remove());
 
         for (let i = 0; i < this.size; i++) {
             for (let j = 0; j < this.size; j++) {
@@ -134,86 +210,64 @@ class Game2048 {
                 if (value === 0) continue;
 
                 const tile = document.createElement('div');
-                tile.className = `tile tile-${value} tile-position-${i}-${j}`;
+                tile.className = `tile tile-${value}`;
                 tile.textContent = value;
 
-                // Позиционирование
+                // Позиция с учётом отступов (116px = 106px плитка + 10px отступ)
                 tile.style.transform = `translate(${j * 116}px, ${i * 116}px)`;
 
                 // Анимация появления
-                if (!withMovement) {
-                    tile.classList.add('new');
-                }
-
-                // Анимация слияния
-                const isMerge = mergePositions.some(p => p.row === i && p.col === j);
-                if (isMerge) tile.classList.add('merged');
+                tile.classList.add('tile-new');
+                setTimeout(() => tile.classList.remove('tile-new'), 50);
 
                 this.container.appendChild(tile);
             }
         }
 
-        this.scoreEl.textContent = this.score;
-        this.undoBtn.disabled = this.history.length === 0 || this.gameOver;
+        this.scoreElement.textContent = this.score;
+        this.undoButton.disabled = !this.canUndo || this.gameOver;
     }
 
-    isGameOver() {
-        if (this.grid.flat().includes(0)) return false;
-        for (let i = 0; i < this.size; i++) {
-            for (let j = 0; j < this.size; j++) {
-                const v = this.grid[i][j];
-                if (i < 3 && this.grid[i+1][j] === v) return false;
-                if (j < 3 && this.grid[i][j+1] === v) return false;
-            }
-        }
-        return true;
-    }
-
-    saveState() {
-        this.history.push({
-            grid: this.grid.map(r => r.slice()),
-            score: this.score
-        });
-        if (this.history.length > 50) this.history.shift();
-        this.saveToStorage();
-    }
-
-    undo() {
-        if (this.gameOver || this.history.length === 0) return;
-        const prev = this.history.pop();
-        this.grid = prev.grid;
-        this.score = prev.score;
-        this.gameOver = false;
-        this.render();
-        this.saveToStorage();
-    }
-
-    newGame() {
-        this.grid = Array(this.size).fill().map(() => Array(this.size).fill(0));
+    // Новая игра
+    startNewGame() {
+        this.grid = this.createEmptyGrid();
         this.score = 0;
         this.gameOver = false;
-        this.history = [];
-        document.querySelectorAll('.overlay').forEach(o => o.classList.add('hidden'));
+        this.canUndo = false;
+        this.previousState = null;
+
+        document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+
         this.addRandomTile();
         this.addRandomTile();
         this.render();
-        this.saveToStorage();
+        this.saveToLocalStorage();
     }
 
     showGameOver() {
-        this.gameOver = true;
         document.getElementById('final-score').textContent = this.score;
         document.getElementById('game-over-overlay').classList.remove('hidden');
     }
 
-    saveScore() {
+    // Сохранение рекорда
+    saveRecord() {
         const name = document.getElementById('player-name').value.trim() || 'Аноним';
-        const leaders = JSON.parse(localStorage.getItem('2048_leaders') || '[]');
-        leaders.push({ name, score: this.score, date: new Date().toLocaleDateString('ru-RU') });
-        leaders.sort((a,b) => b.score - a.score);
-        localStorage.setItem('2048_leaders', JSON.stringify(leaders.slice(0,10)));
+        const record = {
+            name,
+            score: this.score,
+            date: new Date().toLocaleDateString('ru-RU')
+        };
+
+        let leaders = JSON.parse(localStorage.getItem('2048_leaders') || '[]');
+        leaders.push(record);
+        leaders.sort((a, b) => b.score - a.score);
+        leaders = leaders.slice(0, 10);
+
+        localStorage.setItem('2048_leaders', JSON.stringify(leaders));
+
         document.getElementById('name-input-container').classList.add('hidden');
         document.getElementById('saved-message').classList.remove('hidden');
+
         this.updateLeaderboard();
     }
 
@@ -221,69 +275,93 @@ class Game2048 {
         const tbody = document.querySelector('#leaders-table tbody');
         tbody.innerHTML = '';
         const leaders = JSON.parse(localStorage.getItem('2048_leaders') || '[]');
-        leaders.forEach((l, i) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${i+1}</td><td>${l.name}</td><td>${l.score}</td><td>${l.date}</td>`;
-            tbody.appendChild(tr);
+
+        leaders.forEach((entry, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${entry.name}</td>
+                <td>${entry.score}</td>
+                <td>${entry.date}</td>
+            `;
+            tbody.appendChild(row);
         });
     }
 
-    saveToStorage() {
-        localStorage.setItem('2048_save', JSON.stringify({
+    // Сохранение и загрузка игры
+    saveToLocalStorage() {
+        const saveData = {
             grid: this.grid,
-            score: this.score
-        }));
+            score: this.score,
+            canUndo: this.canUndo,
+            previousState: this.previousState
+        };
+        localStorage.setItem('2048_current_game', JSON.stringify(saveData));
     }
 
-    loadSavedGame() {
-        const saved = localStorage.getItem('2048_save');
-        if (saved) {
+    loadFromLocalStorage() {
+        const saved = localStorage.getItem('2048_current_game');
+        if (!saved) return;
+
+        try {
             const data = JSON.parse(saved);
-            this.grid = data.grid;
-            this.score = data.score;
+            this.grid = data.grid || this.createEmptyGrid();
+            this.score = data.score || 0;
+            this.canUndo = data.canUndo || false;
+            this.previousState = data.previousState;
+
             this.render();
+        } catch (e) {
+            console.log('Ошибка загрузки сохранения');
         }
     }
 
-    setupMobileControls() {
-        if ('ontouchstart' in window || window.innerWidth <= 768) {
-            document.getElementById('mobile-controls').classList.remove('hidden');
-        }
-    }
-
+    // Управление
     bindEvents() {
+        // Клавиатура
         document.addEventListener('keydown', e => {
-            const map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-            if (map[e.key]) {
+            const keyMap = {
+                ArrowUp: 'up',
+                ArrowDown: 'down',
+                ArrowLeft: 'left',
+                ArrowRight: 'right',
+                w: 'up', s: 'down', a: 'left', d: 'right',
+                W: 'up', S: 'down', A: 'left', D: 'right'
+            };
+
+            if (keyMap[e.key]) {
                 e.preventDefault();
-                this.move(map[e.key]);
+                this.move(keyMap[e.key]);
             }
         });
 
         // Свайпы
-        let startX, startY;
+        let touchStart = null;
         this.container.addEventListener('touchstart', e => {
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
+            touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         });
+
         this.container.addEventListener('touchend', e => {
-            if (!startX || !startY) return;
-            const dx = e.changedTouches[0].clientX - startX;
-            const dy = e.changedTouches[0].clientY - startY;
-            if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return;
+            if (!touchStart) return;
+            const touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+            const dx = touchEnd.x - touchStart.x;
+            const dy = touchEnd.y - touchStart.y;
 
-            if (Math.abs(dx) > Math.abs(dy)) {
-                this.move(dx > 0 ? 'right' : 'left');
-            } else {
-                this.move(dy > 0 ? 'down' : 'up');
+            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    this.move(dx > 0 ? 'right' : 'left');
+                } else {
+                    this.move(dy > 0 ? 'down' : 'up');
+                }
             }
-            startX = startY = null;
+            touchStart = null;
         });
 
-        document.getElementById('new-game-btn').onclick = () => this.newGame();
-        document.getElementById('undo-btn').onclick = () => this.undo();
-        document.getElementById('save-score').onclick = () => this.saveScore();
-        document.getElementById('restart-after-gameover').onclick = () => this.newGame();
+        // Кнопки
+        this.newGameButton.onclick = () => this.startNewGame();
+        this.undoButton.onclick = () => this.undo();
+        document.getElementById('save-score').onclick = () => this.saveRecord();
+        document.getElementById('restart-after-gameover').onclick = () => this.startNewGame();
         document.getElementById('leaderboard-btn').onclick = () => {
             this.updateLeaderboard();
             document.getElementById('leaderboard-overlay').classList.remove('hidden');
@@ -292,11 +370,14 @@ class Game2048 {
             document.getElementById('leaderboard-overlay').classList.add('hidden');
         };
 
+        // Мобильные кнопки
         document.querySelectorAll('#mobile-controls button').forEach(btn => {
-            btn.onclick = () => this.move(btn.dataset.dir);
+            btn.addEventListener('click', () => this.move(btn.dataset.dir));
         });
     }
 }
 
-// Запуск
-new Game2048();
+// Запуск игры
+document.addEventListener('DOMContentLoaded', () => {
+    new Game2048();
+});
