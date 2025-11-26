@@ -3,52 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2048</title>
-    <link rel="stylesheet" href="style.css">
+    <title>2048 Game</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>2048</h1>
-            <div class="score-container">
-                <div class="score">Счёт: <span id="score">0</span></div>
-                <button id="undo-btn" title="Отменить ход">↺</button>
-                <button id="new-game-btn">Новая игра</button>
-            </div>
-        </header>
-
-        <div id="game-container"></div>
-
-        <!-- Мобильные кнопки управления -->
-        <div id="mobile-controls" class="hidden">
-            <button data-dir="up">Up</button>
-            <button data-dir="left">Left</button>
-            <button data-dir="down">Down</button>
-            <button data-dir="right">Right</button>
+        <h1>2048</h1>
+        <div class="score-container">
+            <div class="score-label">Счёт:</div>
+            <div id="score">0</div>
         </div>
-
-        <!-- Game Over -->
-        <div id="game-over-overlay" class="overlay hidden">
-            <div class="modal">
-                <h2>Игра окончена!</h2>
-                <p>Ваш счёт: <strong id="final-score">0</strong></p>
-                <div id="name-input-container">
-                    <input type="text" id="player-name" placeholder="Ваше имя" maxlength="20">
-                    <button id="save-score">Сохранить рекорд</button>
-                </div>
-                <p id="saved-message" class="hidden success">Рекорд сохранён!</p>
-                <button id="restart-after-gameover">Новая игра</button>
+        <div id="grid"></div>
+        <div class="buttons">
+            <button id="new-game">Начать заново</button>
+            <button id="undo">Отмена хода</button>
+            <button id="leaderboard-btn">Лидерборд</button>
+        </div>
+        <!-- Модальное окно окончания игры -->
+        <div id="game-over-modal" class="modal">
+            <div class="modal-content">
+                <p id="game-over-message">Игра окончена!</p>
+                <input id="name-input" type="text" placeholder="Введите имя" maxlength="20">
+                <button id="save-score">Сохранить результат</button>
+                <button id="restart">Начать заново</button>
             </div>
         </div>
-
-        <!-- Лидерборд -->
-        <button id="leaderboard-btn" class="leaderboard-toggle">Таблица лидеров</button>
-        <div id="leaderboard-overlay" class="overlay hidden">
-            <div class="modal">
-                <h2>Топ-10 игроков</h2>
-                <table id="leaders-table">
+        <!-- Модальное окно лидерборда -->
+        <div id="leaderboard-modal" class="modal">
+            <div class="modal-content">
+                <h2>Лидерборд</h2>
+                <table id="leaderboard-table">
                     <thead>
-                        <tr><th>#</th><th>Имя</th><th>Очки</th><th>Дата</th></tr>
+                        <tr>
+                            <th>Имя</th>
+                            <th>Очки</th>
+                            <th>Дата</th>
+                        </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -56,7 +46,6 @@
             </div>
         </div>
     </div>
-
-    <script src="app.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
