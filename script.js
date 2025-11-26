@@ -26,7 +26,10 @@ let gameOver = false;
 
 // Инициализация сетки
 function initGrid() {
-    grid.innerHTML = '';
+    // Очистка сетки без innerHTML
+    while (grid.firstChild) {
+        grid.removeChild(grid.firstChild);
+    }
     for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
@@ -205,12 +208,29 @@ function undoMove() {
 
 // Лидерборд
 function loadLeaderboard() {
-    const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+    const leaderboard = JSON.parse(localStorage.getItem('leaderboard')  '[]');
     leaderboard.sort((a, b) => b.score - a.score);
-    leaderboardTable.innerHTML = '';
+    
+    // Очистка таблицы без innerHTML
+    while (leaderboardTable.firstChild) {
+        leaderboardTable.removeChild(leaderboardTable.firstChild);
+    }
+    
     leaderboard.slice(0, 10).forEach(entry => {
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td><td>${entry.date}</td>`;
+        
+        const nameCell = document.createElement('td');
+        nameCell.textContent = entry.name;
+        row.appendChild(nameCell);
+        
+        const scoreCell = document.createElement('td');
+        scoreCell.textContent = entry.score;
+        row.appendChild(scoreCell);
+        
+        const dateCell = document.createElement('td');
+        dateCell.textContent = entry.date;
+        row.appendChild(dateCell);
+        
         leaderboardTable.appendChild(row);
     });
 }
