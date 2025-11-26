@@ -1,9 +1,7 @@
-// Константы
 const GRID_SIZE = 4;
-const INITIAL_TILES = 2; // 2-3 тайла в начале
-const NEW_TILES_PER_MOVE = 2; // 1-2 новых тайла после хода
+const INITIAL_TILES = 2;
+const NEW_TILES_PER_MOVE = 2;
 
-// Элементы DOM
 const grid = document.getElementById('grid');
 const scoreEl = document.getElementById('score');
 const newGameBtn = document.getElementById('new-game');
@@ -18,15 +16,12 @@ const closeLeaderboardBtn = document.getElementById('close-leaderboard');
 const gameOverMessage = document.getElementById('game-over-message');
 const leaderboardTable = document.getElementById('leaderboard-table').querySelector('tbody');
 
-// Состояние игры
 let gridState = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
 let score = 0;
-let history = []; // Для отмены хода
+let history = [];
 let gameOver = false;
 
-// Инициализация сетки
 function initGrid() {
-    // Очистка сетки без innerHTML
     while (grid.firstChild) {
         grid.removeChild(grid.firstChild);
     }
@@ -37,7 +32,6 @@ function initGrid() {
     }
 }
 
-// Добавление тайла
 function addTile(value = null, position = null) {
     if (!value) value = Math.random() < 0.9 ? 2 : 4;
     if (!position) {
@@ -55,7 +49,6 @@ function addTile(value = null, position = null) {
     renderTile(r, c, value);
 }
 
-// Рендер тайла
 function renderTile(r, c, value) {
     const tile = document.createElement('div');
     tile.className = 'tile';
@@ -66,11 +59,8 @@ function renderTile(r, c, value) {
     grid.appendChild(tile);
 }
 
-// Обновление отображения
 function updateDisplay() {
-    // Удалить старые тайлы
     document.querySelectorAll('.tile').forEach(t => t.remove());
-    // Рендерить новые
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             if (gridState[r][c]) renderTile(r, c, gridState[r][c]);
@@ -80,12 +70,10 @@ function updateDisplay() {
     saveGameState();
 }
 
-// Сохранение состояния
 function saveGameState() {
     localStorage.setItem('gameState', JSON.stringify({ gridState, score, history }));
 }
 
-// Загрузка состояния
 function loadGameState() {
     const saved = localStorage.getItem('gameState');
     if (saved) {
@@ -99,7 +87,6 @@ function loadGameState() {
     }
 }
 
-// Начало новой игры
 function startNewGame() {
     gridState = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
     score = 0;
@@ -110,7 +97,6 @@ function startNewGame() {
     updateDisplay();
 }
 
-// Движение
 function move(direction) {
     if (gameOver) return;
     const prevState = JSON.parse(JSON.stringify(gridState));
@@ -175,15 +161,12 @@ function move(direction) {
     }
 }
 
-// Проверка окончания игры
 function isGameOver() {
-    // Есть пустые клетки?
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             if (!gridState[r][c]) return false;
         }
     }
-    // Есть ли возможные слияния?
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             const val = gridState[r][c];
@@ -196,7 +179,6 @@ function isGameOver() {
     return true;
 }
 
-// Отмена хода
 function undoMove() {
     if (history.length > 0 && !gameOver) {
         const prev = history.pop();
@@ -206,12 +188,10 @@ function undoMove() {
     }
 }
 
-// Лидерборд
 function loadLeaderboard() {
     const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
     leaderboard.sort((a, b) => b.score - a.score);
     
-    // Очистка таблицы без innerHTML
     while (leaderboardTable.firstChild) {
         leaderboardTable.removeChild(leaderboardTable.firstChild);
     }
@@ -235,7 +215,6 @@ function loadLeaderboard() {
     });
 }
 
-
 function saveScore() {
     const name = nameInput.value.trim();
     if (!name) return;
@@ -247,8 +226,6 @@ function saveScore() {
     gameOverMessage.textContent = 'Ваш рекорд сохранён!';
 }
 
-// Управление
-// Клавиатура
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') move('left');
     else if (e.key === 'ArrowRight') move('right');
@@ -256,7 +233,6 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'ArrowDown') move('down');
 });
 
-// Свайпы (для мобильных)
 let startX, startY;
 grid.addEventListener('touchstart', (e) => {
     startX = e.touches[0].clientX;
@@ -278,7 +254,6 @@ grid.addEventListener('touchend', (e) => {
     startX = startY = null;
 });
 
-// Кнопки
 newGameBtn.addEventListener('click', startNewGame);
 undoBtn.addEventListener('click', undoMove);
 leaderboardBtn.addEventListener('click', () => {
@@ -292,6 +267,5 @@ restartBtn.addEventListener('click', () => {
     startNewGame();
 });
 
-// Инициализация
 initGrid();
 loadGameState();
