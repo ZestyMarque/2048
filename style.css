@@ -1,0 +1,71 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f2efe9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.game-wrapper {
+  background: #faf8ef;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  width: 360px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 70px);
+  grid-template-rows: repeat(4, 70px);
+  gap: 10px;
+  background: #bbada0;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 15px auto;
+}
+
+.cell {
+  background: #cdc1b4;
+  border-radius: 6px;
+  font-size: 26px;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 0.2s;
+}
+
+.buttons button {
+  margin: 5px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+td, th {
+  border: 1px solid #ccc;
+  padding: 4px;
+  font-size: 13px;
+}
+
+/* Цвета плиток */
+.v2 { background: #eee4da; }
+.v4 { background: #ede0c8; }
+.v8 { background: #f2b179; color: white; }
+.v16 { background: #f59563; color: white; }
+.v32 { background: #f67c5f; color: white; }
+.v64 { background: #f65e3b; color: white; }
+.v128 { background: #edcf72; color: white; }
+.v256 { background: #edcc61; color: white; }
+.v512 { background: #edc850; color: white; }
+.v1024 { background: #edc53f; color: white; }
+.v2048 { background: #edc22e; color: white; }
