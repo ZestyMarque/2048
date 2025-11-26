@@ -1,126 +1,197 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', sans-serif; background: #faf8ef; color: #776e65; }
-.container { max-width: 500px; margin: 20px auto; padding: 20px; text-align: center; }
+/* Переменные (в CSS заменены на значения) */
+/* Общие стили */
+body {
+  font-family: Arial, sans-serif;
+  background: #faf8ef;
+  color: #776e65;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
 
-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-h1 { font-size: 60px; font-weight: bold; color: #776e65; }
-.score-container { font-size: 20px; }
-.score { background: #bbada0; color: white; padding: 10px 15px; border-radius: 6px; }
-button { padding: 10px 15px; margin: 5px; background: #8f7a66; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
-button:hover { opacity: 0.9; }
+.container {
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
 
-#game-container {
-    position: relative;
-    width: 480px;
-    height: 480px;
-    background: #bbada0;
-    border-radius: 10px;
-    margin: 0 auto;
-    padding: 10px;
+h1 {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.score-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.score-container .score-label {
+  font-size: 18px;
+  margin-right: 10px;
+}
+.score-container #score {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+/* Игровое поле */
+#grid {
+  position: relative;
+  width: 450px;
+  height: 450px;
+  background: #bbada0;
+  border-radius: 6px;
+  margin: 0 auto 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-content: space-between;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
 .cell {
-    position: absolute;
-    width: 106px;
-    height: 106px;
-    background: rgba(238, 228, 218, 0.35);
-    border-radius: 8px;
+  width: 100px;
+  height: 100px;
+  background: rgba(238, 228, 218, 0.35);
+  border-radius: 3px;
 }
 
 .tile {
-    position: absolute;
-    width: 106px;
-    height: 106px;
-    background: #cdc1b4;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 44px;
-    font-weight: bold;
-    color: #776e65;
-    transition: transform 0.15s ease-in-out;
-    z-index: 10;
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border-radius: 3px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 36px;
+  font-weight: bold;
+  color: #776e65;
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+.tile[data-value="2"] {
+  background: #eee4da;
+}
+.tile[data-value="4"] {
+  background: #ede0c8;
+}
+.tile[data-value="8"] {
+  background: #f2b179;
+  color: #f9f6f2;
+}
+.tile[data-value="16"] {
+  background: #f59563;
+  color: #f9f6f2;
+}
+.tile[data-value="32"] {
+  background: #f67c5f;
+  color: #f9f6f2;
+}
+.tile[data-value="64"] {
+  background: #f65e3b;
+  color: #f9f6f2;
+}
+.tile[data-value="128"] {
+  background: #edcf72;
+  color: #f9f6f2;
+  font-size: 28px;
+}
+.tile[data-value="256"] {
+  background: #edcc61;
+  color: #f9f6f2;
+  font-size: 28px;
+}
+.tile[data-value="512"] {
+  background: #edc850;
+  color: #f9f6f2;
+  font-size: 28px;
+}
+.tile[data-value="1024"] {
+  background: #edc53f;
+  color: #f9f6f2;
+  font-size: 24px;
+}
+.tile[data-value="2048"] {
+  background: #edc22e;
+  color: #f9f6f2;
+  font-size: 24px;
 }
 
-/* Цвета плиток */
-.tile-2    { background: #eee4da; color: #776e65; }
-.tile-4    { background: #ede0c8; color: #776e65; }
-.tile-8    { background: #f2b179; color: #f9f6f2; }
-.tile-16   { background: #f59563; color: #f9f6f2; }
-.tile-32   { background: #f67c5f; color: #f9f6f2; }
-.tile-64   { background: #f65e3b; color: #f9f6f2; }
-.tile-128  { background: #edcf72; color: #f9f6f2; font-size: 36px; }
-.tile-256  { background: #edcc61; color: #f9f6f2; font-size: 36px; }
-.tile-512  { background: #edc850; color: #f9f6f2; font-size: 36px; }
-.tile-1024 { background: #edc53f; color: #f9f6f2; font-size: 28px; }
-.tile-2048 { background: #edc22e; color: #f9f6f2; font-size: 28px; }
-
-/* Анимации */
-@keyframes appear {
-    from { transform: scale(0); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
+/* Кнопки */
+.buttons {
+  margin-bottom: 20px;
 }
-.tile.new { animation: appear 0.2s ease-out; }
-
-@keyframes pop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.15); }
-    100% { transform: scale(1); }
+.buttons button {
+  margin: 0 5px;
+  padding: 10px 15px;
+  background: #8f7a66;
+  color: #f9f6f2;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 16px;
 }
-.tile.merged {
-    animation: pop 0.2s ease-out;
-    z-index: 20;
+.buttons button:hover {
+  background: #9f8a76;
 }
 
-/* Мобильные кнопки */
-#mobile-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 10px;
-    max-width: 300px;
-    margin: 20px auto;
-}
-#mobile-controls button {
-    font-size: 40px;
-    height: 80px;
-    background: #8f7a66;
-}
-#mobile-controls button[data-dir="up"]    { grid-column: 2; }
-#mobile-controls button[data-dir="left"]  { grid-row: 2; grid-column: 1; }
-#mobile-controls button[data-dir="down"]  { grid-row: 2; grid-column: 2; }
-#mobile-controls button[data-dir="right"] { grid-row: 2; grid-column: 3; }
-
-/* Оверлеи */
-.overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-}
+/* Модальные окна */
 .modal {
-    background: #faf8ef;
-    padding: 30px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 400px;
-    text-align: center;
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
 }
-.hidden { display: none; }
-.success { color: green; font-weight: bold; margin: 15px 0; }
-
-.leaderboard-toggle {
-    margin-top: 20px;
-    background: #8f7a66;
+.modal.show {
+  display: flex;
 }
 
-/* Адаптив */
-@media (max-width: 550px) {
-    #game-container { width: 100vw; height: 100vw; max-width: 400px; max-height: 400px; }
-    .cell, .tile { width: calc(25% - 8px); height: calc(25% - 8px); }
-    h1 { font-size: 50px; }
+.modal-content {
+  background: #f9f6f2;
+  padding: 20px;
+  border-radius: 6px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+.modal-content input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+.modal-content button {
+  margin: 5px;
+  padding: 10px 15px;
+  background: #8f7a66;
+  color: #f9f6f2;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.modal-content button:hover {
+  background: #9f8a76;
+}
+.modal-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.modal-content table th, .modal-content table td {
+  padding: 8px;
+  border: 1px solid #ccc;
+}
+.modal-content table th {
+  background: #eee;
 }
